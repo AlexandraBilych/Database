@@ -8,8 +8,7 @@ class NotFoundError(Exception):
     pass
 
 class Entity(object):
-    # db = None
-    db = psycopg2.connect("dbname=%s user=%s password=%s host=%s" % ("shopdb", "shop", "12345", "127.0.0.1"))
+    db = None
 
     # ORM part 1
     __delete_query    = 'DELETE FROM "{table}" WHERE {table}_id=%s'
@@ -17,11 +16,6 @@ class Entity(object):
     __list_query      = 'SELECT * FROM "{table}"'
     __select_query    = 'SELECT * FROM "{table}" WHERE {table}_id=%s'
     __update_query    = 'UPDATE "{table}" SET {columns} WHERE {table}_id=%s'
-
-    # ORM part 2
-    __parent_query    = 'SELECT * FROM "{table}" WHERE {parent}_id=%s'
-    __sibling_query   = 'SELECT * FROM "{sibling}" NATURAL JOIN "{join_table}" WHERE {table}_id=%s'
-    __update_children = 'UPDATE "{table}" SET {parent}_id=%s WHERE {table}_id IN ({children})'
 
     def __init__(self, id=None):
         if self.__class__.db is None:
@@ -121,9 +115,9 @@ class Entity(object):
         cursor = cls.db.cursor(
             cursor_factory=psycopg2.extras.DictCursor
         )
-        print(cls.__name__)
-        cursor.execute("select * from article")
-        # cursor.execute(cls.__select_query.format("article"))
+
+        table_name = cls.__name__.lower()
+        cursor.execute(cls.__list_query.format(table=table_name))
         rows = cursor.fetchall()
 
         print(rows)
@@ -132,7 +126,9 @@ class Entity(object):
         # each instance must be filled with column data, a correct id and MUST NOT query a database for own fields any more
         for row in rows:
             print(row[0])
-            istances.append(cls(row[0]))
+            istance = cls(row[0])
+            instance.__fields = dict(row)
+            istances.append(istance)
 
         # return an array of istances
         return istances
